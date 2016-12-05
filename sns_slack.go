@@ -14,9 +14,9 @@ type SlackMessage struct {
 	Webhookpath string `json:"webhookpath"`
 }
 
-func NotifySlack(awsRegion string, awsWebhook string, slackCh string, slackArn string, subject string, message string) error {
+func NotifySlack(awsRegion string, slackWebhook string, slackCh string, slackArn string, subject string, message string) error {
 	svc := sns.New(session.New(aws.NewConfig().WithRegion(awsRegion)))
-	smsg := &SlackMessage{Channel: slackCh, Webhookpath: awsWebhook, Content: message}
+	smsg := &SlackMessage{Channel: slackCh, Webhookpath: slackWebhook, Content: message}
 	b, err := json.Marshal(smsg)
 
 	if err != nil {
