@@ -13,10 +13,15 @@ type SlackMessage struct {
 	Channel     string `json:"channel"`
 	Webhookpath string `json:"webhookpath"`
 }
+type SlackCredential struct {
+	SlackArn     string
+	SlackCh      string
+	SlackWebhook string
+}
 
-func NotifySlack(awsRegion string, slackWebhook string, slackCh string, slackArn string, subject string, message string) error {
+func NotifySlack(awsRegion string, cred SlackCredential, subject string, message string) error {
 	svc := sns.New(session.New(aws.NewConfig().WithRegion(awsRegion)))
-	smsg := &SlackMessage{Channel: slackCh, Webhookpath: slackWebhook, Content: message}
+	smsg := &SlackMessage{Channel: cred.SlackCh, Webhookpath: cred.SlackWebhook, Content: message}
 	b, err := json.Marshal(smsg)
 
 	if err != nil {
@@ -26,7 +31,7 @@ func NotifySlack(awsRegion string, slackWebhook string, slackCh string, slackArn
 
 	params := &sns.PublishInput{
 		Message:  aws.String(string(b)),
-		TopicArn: aws.String(slackArn),
+		TopicArn: aws.String(cred.SlackArn),
 		Subject:  aws.String(subject),
 	}
 
@@ -34,6 +39,23 @@ func NotifySlack(awsRegion string, slackWebhook string, slackCh string, slackArn
 
 	if err != nil {
 		return ew.Wrapf("Error while notifying slack : {{err}}",
+			err)
+	}
+	return nil
+}
+
+func NotifyMail(awsRegion string, mailarn string, subject string, message string) error {
+	svc := sns.New(session.New(aws.NewConfig().WithRegion(awsRegion)))
+	params := &sns.PublishInput{
+		Message:  aws.String(message),
+		TopicArn: aws.String(mailarn),
+		Subject:  aws.String(subject),
+	}
+
+	_, err := svc.Publish(params)
+
+	if err != nil {
+		return ew.Wrapf("Error while notifying by mail : {{err}}",
 			err)
 	}
 	return nil
