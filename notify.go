@@ -13,15 +13,40 @@ type SlackMessage struct {
 	Channel     string `json:"channel"`
 	Webhookpath string `json:"webhookpath"`
 }
-type SlackCredential struct {
+
+type SlackNotifier struct {
 	SlackArn     string
 	SlackCh      string
 	SlackWebhook string
+	AwsRegion    string
 }
 
-func NotifySlack(awsRegion string, cred SlackCredential, subject string, message string) error {
-	svc := sns.New(session.New(aws.NewConfig().WithRegion(awsRegion)))
-	smsg := &SlackMessage{Channel: cred.SlackCh, Webhookpath: cred.SlackWebhook, Content: message}
+type MailNotifier struct {
+	MailArn   string
+	AwsRegion string
+}
+
+func NewSlackNotifier(awsRegion string, slackArn string, slackCh string, slackWebhook string) *SlackNotifier {
+	sn := &SlackNotifier{
+		SlackArn:     slackArn,
+		SlackCh:      slackCh,
+		SlackWebhook: slackWebhook,
+		AwsRegion:    awsRegion,
+	}
+	return sn
+}
+
+func NewMailNotifier(awsRegion string, mailArn string) *MailNotifier {
+	mn := &MailNotifier{
+		AwsRegion: awsRegion,
+		MailArn:   mailArn,
+	}
+	return mn
+}
+
+func (sn *SlackNotifier) NotifySlack(subject string, message string) error {
+	svc := sns.New(session.New(aws.NewConfig().WithRegion(sn.AwsRegion)))
+	smsg := &SlackMessage{Channel: sn.SlackCh, Webhookpath: sn.SlackWebhook, Content: message}
 	b, err := json.Marshal(smsg)
 
 	if err != nil {
@@ -31,7 +56,7 @@ func NotifySlack(awsRegion string, cred SlackCredential, subject string, message
 
 	params := &sns.PublishInput{
 		Message:  aws.String(string(b)),
-		TopicArn: aws.String(cred.SlackArn),
+		TopicArn: aws.String(sn.SlackArn),
 		Subject:  aws.String(subject),
 	}
 
@@ -44,11 +69,11 @@ func NotifySlack(awsRegion string, cred SlackCredential, subject string, message
 	return nil
 }
 
-func NotifyMail(awsRegion string, mailarn string, subject string, message string) error {
-	svc := sns.New(session.New(aws.NewConfig().WithRegion(awsRegion)))
+func (mn *MailNotifier) NotifyMail(subject string, message string) error {
+	svc := sns.New(session.New(aws.NewConfig().WithRegion(mn.AwsRegion)))
 	params := &sns.PublishInput{
 		Message:  aws.String(message),
-		TopicArn: aws.String(mailarn),
+		TopicArn: aws.String(mn.MailArn),
 		Subject:  aws.String(subject),
 	}
 
