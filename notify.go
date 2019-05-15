@@ -3,6 +3,7 @@ package snsnotify
 import (
 	"encoding/json"
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/sns"
 	ew "github.com/hashicorp/errwrap"
@@ -46,6 +47,10 @@ func NewMailNotifier(awsRegion string, mailArn string) *MailNotifier {
 
 func (sn *SlackNotifier) NotifySlack(subject string, message string) error {
 	svc := sns.New(session.New(aws.NewConfig().WithRegion(sn.AwsRegion)))
+	return sn.call(svc, subject, message)
+}
+
+func (sn *SlackNotifier) call(svc *sns.SNS, subject string, message string) error {
 	smsg := &SlackMessage{Channel: sn.SlackCh, Webhookpath: sn.SlackWebhook, Content: message}
 	b, err := json.Marshal(smsg)
 
@@ -67,6 +72,13 @@ func (sn *SlackNotifier) NotifySlack(subject string, message string) error {
 			err)
 	}
 	return nil
+}
+
+func (sn *SlackNotifier) NotifySlackWKey(accessKey string, secretKey string, subject string, message string) error {
+	svc := sns.New(session.New(
+		aws.NewConfig().WithRegion(sn.AwsRegion).
+			WithCredentials(credentials.NewStaticCredentials(accessKey, secretKey, "nil"))))
+	return sn.call(svc, subject, message)
 }
 
 func (mn *MailNotifier) NotifyMail(subject string, message string) error {
